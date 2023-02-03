@@ -17,7 +17,7 @@ const authors = [
   { id: 3, name: "Brent Weeks" },
 ];
 
-const books = [
+let books = [
   { id: 1, name: "Harry Porter and the Chamber of Secrets", authorId: 1 },
   { id: 2, name: "Harry Porter and the Prisoner of Azkaban", authorId: 1 },
   { id: 3, name: "Harry Porter and the Goblet of Fire", authorId: 1 },
@@ -126,6 +126,28 @@ const RootMutationType = new GraphQLObjectType({
         book.name = args.name;
         book.authorId = args.authorId;
         return book;
+      },
+    },
+    deleteBook: {
+      type: new GraphQLList(BookType),
+      description: "Delete a Book",
+      args: {
+        id: { type: new GraphQLNonNull(GraphQLInt) },
+      },
+      resolve: (parent, args) => {
+        // Ensure the book which the user want to delete exists in the books array
+        const book = books.find((book) => book.id === args.id);
+        let removed = false;
+
+        if (book) {
+          books = books.filter((book) => book.id !== args.id);
+          removed = true;
+        }
+
+        // console.log(book);
+        console.log(books);
+
+        return books;
       },
     },
     addAuthor: {
