@@ -30,6 +30,7 @@ let books = [
   { id: 8, name: "Beyond the Shadows", authorId: 3 },
 ];
 
+// Create a new object type for book and all its attributes
 const BookType = new GraphQLObjectType({
   name: "Book",
   description: "This represents a book written by an author",
@@ -37,10 +38,14 @@ const BookType = new GraphQLObjectType({
     id: { type: new GraphQLNonNull(GraphQLInt) },
     name: { type: new GraphQLNonNull(GraphQLString) },
     authorId: { type: new GraphQLNonNull(GraphQLInt) },
-    // A book has only 1 author
+    // We need to add author to BookType in order to get the detailed information from author
     author: {
+      // This resolve has to be a function instead of an object because both BookType and AuthorType are pointing to each other
+      // There will be undefined type error when they are set up in object type
       type: AuthorType,
+      // This (book) here is referring to the parent of this 'author' field
       resolve: (book) => {
+        // A book has only 1 author
         return authors.find((author) => author.id === book.authorId);
       },
     },
@@ -53,10 +58,11 @@ const AuthorType = new GraphQLObjectType({
   fields: () => ({
     id: { type: new GraphQLNonNull(GraphQLInt) },
     name: { type: new GraphQLNonNull(GraphQLString) },
-    // An author can has many books, so we need a new GraphQL list (array) to group all the books belong to that author
-    // Use .filter() to return an array of books which match the author
     books: {
+      // An author can has many books, so we need a new GraphQL list (array) to group all the books belong to that author
+      // Use .filter() to return an array of books which match the author
       type: new GraphQLList(BookType),
+      // This (author) here is referring to the parent of this 'books' field
       resolve: (author) => {
         return books.filter((book) => book.authorId === author.id);
       },
@@ -64,6 +70,9 @@ const AuthorType = new GraphQLObjectType({
   }),
 });
 
+// These are basic root query types for us to get data from books, book, authors and author
+// The results from the root query types should be depended on BookType and AuthorType
+// We need new GraphQLList() for the query which returns more than 1 element, and should be represented in list
 const RootQueryType = new GraphQLObjectType({
   name: "Query",
   description: "Root Query",
@@ -71,6 +80,7 @@ const RootQueryType = new GraphQLObjectType({
     book: {
       type: BookType,
       description: "A Single Book",
+      // User needs to pass an argument (e.g. book id) here in order to make a valid query
       args: { id: { type: GraphQLInt } },
       resolve: (parent, args) => books.find((book) => book.id === args.id),
     },
@@ -82,6 +92,7 @@ const RootQueryType = new GraphQLObjectType({
     author: {
       type: AuthorType,
       description: "A Single Author",
+      // User needs to pass an argument (e.g. author id) here in order to make a valid query
       args: { id: { type: GraphQLInt } },
       resolve: (parent, args) =>
         authors.find((author) => author.id === args.id),
@@ -131,6 +142,7 @@ const RootMutationType = new GraphQLObjectType({
       },
     },
     deleteBook: {
+      // We need new GraphQLList() for the query which returns more than 1 element, and should be represented in list
       type: new GraphQLList(BookType),
       description: "Delete a Book",
       args: {
@@ -178,6 +190,7 @@ const RootMutationType = new GraphQLObjectType({
       },
     },
     deleteAuthor: {
+      // We need new GraphQLList() for the query which returns more than 1 element, and should be represented in list
       type: new GraphQLList(AuthorType),
       description: "Delete a Author",
       args: {
@@ -199,11 +212,13 @@ const RootMutationType = new GraphQLObjectType({
   }),
 });
 
+// This schema accepts both query (user can get data) and mutation (user can update or delete data)
 const schema = new GraphQLSchema({
   query: RootQueryType,
   mutation: RootMutationType,
 });
 
+// Keep in mind this is 'graphiql' but not 'graphql'
 app.use("/graphql", graphqlHTTP({ schema: schema, graphiql: true }));
 
 app.listen(8000, () => {
