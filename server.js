@@ -1,4 +1,14 @@
 const express = require("express");
+const { graphqlHTTP } = require("express-graphql");
+const {
+  GraphQLSchema,
+  GraphQLObjectType,
+  GraphQLList,
+  GraphQLNonNull,
+  GraphQLInt,
+  GraphQLString,
+} = require("graphql");
+
 const app = express();
 
 const authors = [
@@ -17,6 +27,76 @@ const books = [
   { id: 7, name: "The Way of Shadows", authorId: 3 },
   { id: 8, name: "Beyond the Shadows", authorId: 3 },
 ];
+
+const BookType = new GraphQLObjectType({
+  name: "Book",
+  description: "This represents a book written by an author",
+  fields: () => ({
+    id: { type: new GraphQLNonNull(GraphQLInt) },
+    name: { type: new GraphQLNonNull(GraphQLString) },
+    authorId: { type: new GraphQLNonNull(GraphQLInt) },
+    // A book has only 1 author
+    author: {
+      type: AuthorType,
+      resolve: (book) => {
+        return authors.find((author) => author.id === book.authorId);
+      },
+    },
+  }),
+});
+
+const AuthorType = new GraphQLObjectType({
+  name: "Author",
+  description: "This represents an author of a book",
+  fields: () => ({
+    id: { type: new GraphQLNonNull(GraphQLInt) },
+    name: { type: new GraphQLNonNull(GraphQLString) },
+    // An author can has many books, so we need a new GraphQL list (array) to group all the books belong to that author
+    // Use .filter() to return an array of books which match the author
+    books: {
+      type: new GraphQLList(BookType),
+      resolve: (author) => {
+        return books.filter((book) => book.authorId === author.id);
+      },
+    },
+  }),
+});
+
+const RootQueryType = new GraphQLObjectType({
+  name: "Query",
+  description: "Root Query",
+  fields: () => ({
+    book: {
+      type: BookType,
+      description: "A Single Book",
+      args: { id: { type: GraphQLInt } },
+      resolve: (parent, args) => books.find((book) => book.id === args.id),
+    },
+    books: {
+      type: new GraphQLList(BookType),
+      description: "List of All Books",
+      resolve: () => books,
+    },
+    author: {
+      type: AuthorType,
+      description: "A Single Author",
+      args: { id: { type: GraphQLInt } },
+      resolve: (parent, args) =>
+        authors.find((author) => author.id === args.id),
+    },
+    authors: {
+      type: new GraphQLList(AuthorType),
+      description: "List of All Authors",
+      resolve: () => authors,
+    },
+  }),
+});
+
+const schema = new GraphQLSchema({
+  query: RootQueryType,
+});
+
+app.use("/graphql", graphqlHTTP({ schema: schema, graphiql: true }));
 
 app.listen(8000, () => {
   console.log("Running Server.js");
