@@ -11,12 +11,14 @@ const {
 
 const app = express();
 
-const authors = [
+// Cannot use const because we have deleteBook mutation
+let authors = [
   { id: 1, name: "J. K. Rowling" },
   { id: 2, name: "J. R. R. Tolkien" },
   { id: 3, name: "Brent Weeks" },
 ];
 
+// Cannot use const because we have deleteAuthor mutation
 let books = [
   { id: 1, name: "Harry Porter and the Chamber of Secrets", authorId: 1 },
   { id: 2, name: "Harry Porter and the Prisoner of Azkaban", authorId: 1 },
@@ -144,9 +146,6 @@ const RootMutationType = new GraphQLObjectType({
           removed = true;
         }
 
-        // console.log(book);
-        console.log(books);
-
         return books;
       },
     },
@@ -176,6 +175,25 @@ const RootMutationType = new GraphQLObjectType({
         let author = authors.find((author) => author.id === args.id);
         author.name = args.name;
         return author;
+      },
+    },
+    deleteAuthor: {
+      type: new GraphQLList(AuthorType),
+      description: "Delete a Author",
+      args: {
+        id: { type: new GraphQLNonNull(GraphQLInt) },
+      },
+      resolve: (parent, args) => {
+        // Ensure the author which the user want to delete exists in the authors array
+        const author = authors.find((author) => author.id === args.id);
+        let removed = false;
+
+        if (author) {
+          authors = authors.filter((author) => author.id !== args.id);
+          removed = true;
+        }
+
+        return authors;
       },
     },
   }),
